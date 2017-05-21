@@ -206,7 +206,7 @@ CREATE TABLE device
     os INTEGER NOT NULL CONSTRAINT fk_os_id REFERENCES os(id),  
     os_version CHAR,
     os_licence_key CHAR,
-    customer INTEGER NOT NULL CONSTRAINT fk_customer_id REFERENCES org(id), 
+    customer INTEGER NOT NULL DEFAULT 1, 
     service INTEGER NOT NULL CONSTRAINT fk_service_id REFERENCES service(id),
     role INTEGER NOT NULL CONSTRAINT fk_role_id REFERENCES role(id),
     monitored INTEGER NOT NULL DEFAULT 0,
@@ -588,28 +588,28 @@ END;
 
 
 -- Prevent inserts into device table unless customer exists
-CREATE TRIGGER fki_device_customer_id
-BEFORE INSERT ON device
-FOR EACH ROW BEGIN
-  SELECT RAISE(ROLLBACK, 'insert on table "device" violates foreign key constraint "fki_device_customer_id"')
-  WHERE (SELECT id FROM org WHERE id = NEW.customer) IS NULL;
-END;
+--CREATE TRIGGER fki_device_customer_id
+--BEFORE INSERT ON device
+--FOR EACH ROW BEGIN
+--  SELECT RAISE(ROLLBACK, 'insert on table "device" violates foreign key constraint "fki_device_customer_id"')
+--  WHERE (SELECT id FROM org WHERE id = NEW.customer) IS NULL;
+--END;
 
 -- Prevent updates on device table unless customer exists
-CREATE TRIGGER fku_device_customer_id
-BEFORE UPDATE ON device
-FOR EACH ROW BEGIN
-    SELECT RAISE(ROLLBACK, 'update on table "device" violates foreign key constraint "fku_device_customer_id"')
-      WHERE (SELECT id FROM org WHERE id = NEW.customer) IS NULL;
-END;
+--CREATE TRIGGER fku_device_customer_id
+--BEFORE UPDATE ON device
+--FOR EACH ROW BEGIN
+--    SELECT RAISE(ROLLBACK, 'update on table "device" violates foreign key constraint "fku_device_customer_id"')
+--      WHERE (SELECT id FROM org WHERE id = NEW.customer) IS NULL;
+--END;
 
 -- Prevent deletions of customers referenced by the device table
-CREATE TRIGGER fkd_device_customer_id
-BEFORE DELETE ON org
-FOR EACH ROW BEGIN
-  SELECT RAISE(ROLLBACK, 'delete on table "org" violates foreign key constraint "fkd_device_customer_id"')
-  WHERE (SELECT customer FROM device WHERE customer = OLD.id) IS NOT NULL;
-END;
+--CREATE TRIGGER fkd_device_customer_id
+--BEFORE DELETE ON org
+--FOR EACH ROW BEGIN
+--  SELECT RAISE(ROLLBACK, 'delete on table "org" violates foreign key constraint "fkd_device_customer_id"')
+--  WHERE (SELECT customer FROM device WHERE customer = OLD.id) IS NOT NULL;
+--END;
 
 
 -- Prevent inserts into device table unless service level exists

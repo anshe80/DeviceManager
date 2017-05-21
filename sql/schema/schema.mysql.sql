@@ -191,7 +191,7 @@ CREATE TABLE device
 	meta_update_time VARCHAR(255),
 	meta_update_user VARCHAR(255),
 	FOREIGN KEY (domain) REFERENCES domain(id),
-	FOREIGN KEY (rack) REFERENCES rack(id),	
+	FOREIGN KEY (rack) REFERENCES rack(id),
 	FOREIGN KEY (hardware) REFERENCES hardware(id),
 	FOREIGN KEY (os) REFERENCES os(id),
 	FOREIGN KEY (customer) REFERENCES org(id),
