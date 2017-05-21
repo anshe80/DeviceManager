@@ -11,6 +11,7 @@ sudo rm -rf /etc/rackmonkey.conf
 sudo ln -s -d $rootPath/rackmonkey.conf /etc/rackmonkey.conf
 
 sudo rm -rf /etc/apache2/conf.d/httpd-rackmonkey.conf
+#sudo ln -s $rootPath/httpd-rackmonkey.conf /etc/apache2/conf.d/httpd-rackmonkey.conf
 sudo ln -s $rootPath/httpd-rackmonkey.conf /etc/apache2/conf.d/httpd-rackmonkey.conf
 
 cd ..
@@ -45,8 +46,11 @@ sqlite3 ./rackmonkey.db < sql/data/sample_data.sql
 sudo ln -s -d $rootPath/rackmonkey.db /var/lib/rackmonkey/rackmonkey.db
 sudo chown www-data:www-data /var/lib/rackmonkey/rackmonkey.db
 
+sudo ln -s /etc/apache2/mods-available/cgi.load /etc/apache2/mods-enabled/.
+
 echo "********** Follows are creating symbolic **********"
 ls /var/lib/rackmonkey
+ls /var/www/
 ls /etc/apache2/conf.d/httpd-rackmonkey.conf
 ls /etc/rackmonkey.conf
 
