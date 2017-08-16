@@ -91,7 +91,7 @@ eval {
     }
     else # display a view
     {
-        unless ($view =~ /^(?:config|help|app|building|device|deviceApp|domain|hardware|network|power|org|os|rack|report|role|room|row|service|system)$/)
+        unless ($view =~ /^(?:config|help|app|building|device|deviceApp|domain|hardware|network|power|org|os|rack|report|role|room|row|service|system|login)$/)
         {
             die "RMERR: '$view' is not a valid view. Did you type the URL manually? Note that view names are singular, for example device NOT devices.";
         }
@@ -658,6 +658,17 @@ eval {
                     $$service{'notes'} = formatNotes($$service{'notes'});
                 }
                 $template->param($service);
+            }
+        }
+        elsif ($view eq 'login')
+        {
+            if ($viewType =~ /^default/)
+            {
+                # do login
+            }
+            elsif ($viewType =~/^error/)
+            {
+            
             }
         }
         else

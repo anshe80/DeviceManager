@@ -5,14 +5,17 @@ sudo apt-get install libdbi-perl
 sudo apt-get install libdbd-sqlite3-perl
 sudo apt-get install libhtml-template-perl
 sudo apt-get install libhtml-parser-perl
+# 解决找不到CGI问题
+sudo apt-get install libcgi-session-perl
 
 rootPath=$(pwd)
 sudo rm -rf /etc/rackmonkey.conf
 sudo ln -s -d $rootPath/rackmonkey.conf /etc/rackmonkey.conf
 
-sudo rm -rf /etc/apache2/conf.d/httpd-rackmonkey.conf
+#sudo rm -rf /etc/apache2/conf.d/httpd-rackmonkey.conf
 #sudo ln -s $rootPath/httpd-rackmonkey.conf /etc/apache2/conf.d/httpd-rackmonkey.conf
-sudo ln -s $rootPath/httpd-rackmonkey.conf /etc/apache2/conf.d/httpd-rackmonkey.conf
+sudo rm -rf /etc/apache2/sites-enabled/httpd-rackmonkey.conf
+sudo ln -s $rootPath/httpd-rackmonkey.conf /etc/apache2/sites-enabled/httpd-rackmonkey.conf
 
 cd ..
 rootPath=$(pwd)

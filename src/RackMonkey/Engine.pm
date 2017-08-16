@@ -1,4 +1,4 @@
-﻿package RackMonkey::Engine;
+package RackMonkey::Engine;
 ##############################################################################
 # RackMonkey - Know Your Racks - http://www.rackmonkey.org                   #
 # Version 1.2.5-1                                                            #
@@ -145,10 +145,10 @@ sub simpleItem
     croak 'RM_ENGINE: Not a valid table.' unless $self->_checkTableName($table);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT id, name 
-		FROM $table 
-		WHERE id = ?
-	!
+        SELECT id, name 
+        FROM $table 
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $entry = $sth->fetchrow_hashref('NAME_lc');
@@ -167,31 +167,31 @@ sub simpleList
     {
         $sth = $self->dbh->prepare(
             qq!
-    		SELECT 
-    			id, 
-    			name,
-    			meta_default_data 
-    		FROM $table 
-    		WHERE meta_default_data = 0
-    		ORDER BY 
-    		    meta_default_data DESC,
-    			name
-    	!
+            SELECT 
+                id, 
+                name,
+                meta_default_data 
+            FROM $table 
+            WHERE meta_default_data = 0
+            ORDER BY 
+                meta_default_data DESC,
+                name
+        !
         );
     }
     else
     {
         $sth = $self->dbh->prepare(
             qq!
-    		SELECT 
-    			id, 
-    			name,
-    			meta_default_data
-    		FROM $table 
-    		ORDER BY
-    		    meta_default_data DESC,
-    			name
-    	!
+            SELECT 
+                id, 
+                name,
+                meta_default_data
+            FROM $table 
+            ORDER BY
+                meta_default_data DESC,
+                name
+        !
         );
     }
 
@@ -205,10 +205,10 @@ sub itemCount
     croak "RM_ENGINE: Not a valid table" unless $self->_checkTableName($table);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT count(*) 
-		FROM $table  
-		WHERE meta_default_data = 0
-	!
+        SELECT count(*) 
+        FROM $table  
+        WHERE meta_default_data = 0
+    !
     );
     $sth->execute;
     return ($sth->fetchrow_array)[0];
@@ -312,7 +312,44 @@ sub _httpFixer
     }
     return $url;
 }
+##############################################################################
+# Session Methods                                                        #
+##############################################################################
+sub saveSessionId
+{
+    my ($self, $userIp, $sessionId) = @_;
+    
+    my $sth = $self->dbh->prepare(qq!INSERT INTO sessionId (user_ip, sessionId) VALUES(?, ?)!);
+    $sth->execute($userIp, $sessionId);
+    my $newId = $self->_lastInsertId('sessionId');
+    $self->dbh->commit();
+    
+    return $newId;
+}
 
+sub getSessionId
+{
+    my ($self, $userIp) = @_;
+    my $sth = $self->dbh->prepare(
+        qq!
+        SELECT sessionId
+        FROM sessionId 
+        WHERE user_ip = ?
+    !
+    );
+    $sth->execute($userIp);
+    my $entry = $sth->fetchrow_hashref('NAME_lc');
+    #croak "RM_ENGINE: No such entry '$id' in table '$table'." unless defined($$entry{'id'});
+    return $$entry{'sessionId'};
+}
+
+sub deleteSessionId
+{
+    my ($self, $userIp) = @_;
+    my $sth = $self->dbh->prepare(qq!DELETE FROM sessionId WHERE user_ip = ?!);
+    $sth->execute($userIp);
+    $self->dbh->commit();
+}
 
 ##############################################################################
 # Application Methods                                                        #
@@ -324,10 +361,10 @@ sub app
     croak "RM_ENGINE: Unable to retrieve app. No app id specified." unless ($id);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT app.* 
-		FROM app 
-		WHERE id = ?
-	!
+        SELECT app.* 
+        FROM app 
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $app = $sth->fetchrow_hashref('NAME_lc');
@@ -343,11 +380,11 @@ sub appList
     $orderBy = $orderBy . ', app.name' unless $orderBy eq 'app.name';    # default second ordering is name
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT app.* 
-		FROM app
-		WHERE meta_default_data = 0
-		ORDER BY $orderBy
-	!
+        SELECT app.* 
+        FROM app
+        WHERE meta_default_data = 0
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -358,24 +395,24 @@ sub appDevicesUsedList
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-		    device_app.id               AS device_app_id,
-			device.id			        AS device_id,
-		 	device.name			        AS device_name, 
-			app.name			        AS app_name,
-			app_relation.id 	        AS app_relation_id,
-			app_relation.name 	        AS app_relation_name,
-			domain.name			        AS domain_name,
-			domain.meta_default_data	AS domain_meta_default_data
-		FROM
-			device, app_relation, device_app, app, domain 
-		WHERE
-		 	device_app.app = app.id AND 
-			device_app.device = device.id AND 
-			device_app.relation = app_relation.id AND
-			device.domain = domain.id AND 
-			app.id = ?
-	!
+        SELECT
+            device_app.id               AS device_app_id,
+            device.id                   AS device_id,
+            device.name                 AS device_name, 
+            app.name                    AS app_name,
+            app_relation.id             AS app_relation_id,
+            app_relation.name           AS app_relation_name,
+            domain.name                 AS domain_name,
+            domain.meta_default_data    AS domain_meta_default_data
+        FROM
+            device, app_relation, device_app, app, domain 
+        WHERE
+            device_app.app = app.id AND 
+            device_app.device = device.id AND 
+            device_app.relation = app_relation.id AND
+            device.domain = domain.id AND 
+            app.id = ?
+    !
     );
     $sth->execute($id);
     return $sth->fetchall_arrayref({});
@@ -386,21 +423,21 @@ sub appOnDeviceList
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-		    device_app.id       AS device_app_id,
-		    app_relation.name   AS app_relation_name,
-			app.id				AS app_id,
-			app.name			AS app_name
-		FROM
-			device, app_relation, device_app, app 
-		WHERE
-		 	device_app.app = app.id AND 
-			device_app.device = device.id AND 
-			device_app.relation = app_relation.id AND
-			device.id = ?
-		ORDER BY
-			app.name
-	!
+        SELECT
+            device_app.id       AS device_app_id,
+            app_relation.name   AS app_relation_name,
+            app.id              AS app_id,
+            app.name            AS app_name
+        FROM
+            device, app_relation, device_app, app 
+        WHERE
+            device_app.app = app.id AND 
+            device_app.device = device.id AND 
+            device_app.relation = app_relation.id AND
+            device.id = ?
+        ORDER BY
+            app.name
+    !
     );
     $sth->execute($id);
     return $sth->fetchall_arrayref({});
@@ -465,10 +502,10 @@ sub building
     croak "RM_ENGINE: Unable to retrieve building. No building id specified." unless ($id);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT building.* 
-		FROM building 
-		WHERE id = ?
-	!
+        SELECT building.* 
+        FROM building 
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $building = $sth->fetchrow_hashref('NAME_lc');
@@ -484,11 +521,11 @@ sub buildingList
     $orderBy = $orderBy . ', building.name' unless $orderBy eq 'building.name';    # default second ordering is name
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT building.* 
-		FROM building
-		WHERE meta_default_data = 0
-		ORDER BY $orderBy
-	!
+        SELECT building.* 
+        FROM building
+        WHERE meta_default_data = 0
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -556,48 +593,48 @@ sub device
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			device.*, 
-			rack.name 					AS rack_name,
-			row.name					AS row_name,
-			row.id						AS row_id,
-			room.name					AS room_name,
-			room.id						AS room_id,
-			building.name				AS building_name,
-			building.name_short			AS building_name_short,			
-			building.id					AS building_id,	
-			building.meta_default_data	AS building_meta_default_data,
-			hardware.name 				AS hardware_name,
-			hardware.size 				AS hardware_size,
-			hardware.meta_default_data	AS hardware_meta_default_data,
-			hardware_manufacturer.id	AS hardware_manufacturer_id,
-			hardware_manufacturer.name	AS hardware_manufacturer_name,
-			hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data,
-			role.name 					AS role_name, 
-			role.meta_default_data		AS role_meta_default_data,
-			os.name 					AS os_name,
-			os.meta_default_data		AS os_meta_default_data,
-			customer.name 				AS customer_name,
-			customer.meta_default_data	AS customer_meta_default_data,
-			service.name 				AS service_name,
-			service.meta_default_data	AS service_meta_default_data,
-			domain.name					AS domain_name,
-			domain.meta_default_data	AS domain_meta_default_data
-		FROM device, rack, row, room, building, hardware, org hardware_manufacturer, role, os, org customer, service, domain 
-		WHERE 
-			device.rack = rack.id AND 
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id AND			
-			device.hardware = hardware.id AND 
-			hardware.manufacturer = hardware_manufacturer.id AND
-			device.role = role.id AND
-			device.os = os.id AND
-			device.customer = customer.id AND
-			device.domain = domain.id AND
-			device.service = service.id AND
-			device.id = ?
-	!
+        SELECT 
+            device.*, 
+            rack.name                   AS rack_name,
+            row.name                    AS row_name,
+            row.id                      AS row_id,
+            room.name                   AS room_name,
+            room.id                     AS room_id,
+            building.name               AS building_name,
+            building.name_short         AS building_name_short,         
+            building.id                 AS building_id, 
+            building.meta_default_data  AS building_meta_default_data,
+            hardware.name               AS hardware_name,
+            hardware.size               AS hardware_size,
+            hardware.meta_default_data  AS hardware_meta_default_data,
+            hardware_manufacturer.id    AS hardware_manufacturer_id,
+            hardware_manufacturer.name  AS hardware_manufacturer_name,
+            hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data,
+            role.name                   AS role_name, 
+            role.meta_default_data      AS role_meta_default_data,
+            os.name                     AS os_name,
+            os.meta_default_data        AS os_meta_default_data,
+            customer.name               AS customer_name,
+            customer.meta_default_data  AS customer_meta_default_data,
+            service.name                AS service_name,
+            service.meta_default_data   AS service_meta_default_data,
+            domain.name                 AS domain_name,
+            domain.meta_default_data    AS domain_meta_default_data
+        FROM device, rack, row, room, building, hardware, org hardware_manufacturer, role, os, org customer, service, domain 
+        WHERE 
+            device.rack = rack.id AND 
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id AND         
+            device.hardware = hardware.id AND 
+            hardware.manufacturer = hardware_manufacturer.id AND
+            device.role = role.id AND
+            device.os = os.id AND
+            device.customer = customer.id AND
+            device.domain = domain.id AND
+            device.service = service.id AND
+            device.id = ?
+    !
     );
     $sth->execute($id);
     my $device = $sth->fetchrow_hashref('NAME_lc');
@@ -634,47 +671,47 @@ sub deviceList
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			device.*, 
-			rack.name 					AS rack_name,
-			row.name					AS row_name,
-			row.id						AS row_id,
-			room.name					AS room_name,
-			room.id						AS room_id,
-			building.name				AS building_name,
-			building.name_short			AS building_name_short,			
-			building.id					AS building_id,	
-			building.meta_default_data	AS building_meta_default_data,
-			hardware.name 				AS hardware_name,
-			hardware.size 				AS hardware_size,
-			hardware.meta_default_data	AS hardware_meta_default_data,
-			hardware_manufacturer.id	AS hardware_manufacturer_id,
-			hardware_manufacturer.name	AS hardware_manufacturer_name,
-			hardware_manufacturer.meta_default_data	AS hardware_manufacturer_meta_default_data,
-			role.name 					AS role_name, 
-			os.name 					AS os_name, 
-			customer.name 				AS customer_name,
-			service.name 				AS service_name,
-			domain.name					AS domain_name,
-			domain.meta_default_data	AS domain_meta_default_data
-		FROM device, rack, row, room, building, hardware, org hardware_manufacturer, role, os, org customer, service, domain 
-		WHERE 
-			device.meta_default_data = 0 AND
-			device.rack = rack.id AND 
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id AND			
-			device.hardware = hardware.id AND 
-			hardware.manufacturer = hardware_manufacturer.id AND
-			device.role = role.id AND
-			device.os = os.id AND
-			device.customer = customer.id AND
-			device.domain = domain.id AND
-			device.service = service.id
-			$filterBy
-			$deviceSearch
-		ORDER BY $orderBy
-	!
+        SELECT 
+            device.*, 
+            rack.name                   AS rack_name,
+            row.name                    AS row_name,
+            row.id                      AS row_id,
+            room.name                   AS room_name,
+            room.id                     AS room_id,
+            building.name               AS building_name,
+            building.name_short         AS building_name_short,         
+            building.id                 AS building_id, 
+            building.meta_default_data  AS building_meta_default_data,
+            hardware.name               AS hardware_name,
+            hardware.size               AS hardware_size,
+            hardware.meta_default_data  AS hardware_meta_default_data,
+            hardware_manufacturer.id    AS hardware_manufacturer_id,
+            hardware_manufacturer.name  AS hardware_manufacturer_name,
+            hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data,
+            role.name                   AS role_name, 
+            os.name                     AS os_name, 
+            customer.name               AS customer_name,
+            service.name                AS service_name,
+            domain.name                 AS domain_name,
+            domain.meta_default_data    AS domain_meta_default_data
+        FROM device, rack, row, room, building, hardware, org hardware_manufacturer, role, os, org customer, service, domain 
+        WHERE 
+            device.meta_default_data = 0 AND
+            device.rack = rack.id AND 
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id AND         
+            device.hardware = hardware.id AND 
+            hardware.manufacturer = hardware_manufacturer.id AND
+            device.role = role.id AND
+            device.os = os.id AND
+            device.customer = customer.id AND
+            device.domain = domain.id AND
+            device.service = service.id
+            $filterBy
+            $deviceSearch
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -687,37 +724,37 @@ sub deviceListInRack
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			device.*,
-			rack.name 					AS rack_name,
-			rack.id						AS rack_id,
-			building.meta_default_data	AS building_meta_default_data,
-			hardware.name 				AS hardware_name,
-			hardware.meta_default_data	AS hardware_meta_default_data,
-			hardware_manufacturer.id	AS hardware_manufacturer_id,
-			hardware_manufacturer.name	AS hardware_manufacturer_name,
-			hardware_manufacturer.meta_default_data	AS hardware_manufacturer_meta_default_data,
-			hardware.size				AS hardware_size,
-			domain.name					AS domain_name,
-			domain.meta_default_data	AS domain_meta_default_data,
-			role.name 					AS role_name, 
-			customer.name 				AS customer_name
-		FROM
-			device, rack, row, room, building, hardware, org hardware_manufacturer, domain, role, org customer
-		WHERE
-			device.meta_default_data = 0 AND
-			device.rack = rack.id AND 
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id AND				
-			device.hardware = hardware.id AND
-			hardware.manufacturer = hardware_manufacturer.id AND
-			device.domain = domain.id AND
-			device.role = role.id AND
-			device.customer = customer.id AND
-			rack.id = ?
-		ORDER BY rack.row_pos
-	!
+        SELECT 
+            device.*,
+            rack.name                   AS rack_name,
+            rack.id                     AS rack_id,
+            building.meta_default_data  AS building_meta_default_data,
+            hardware.name               AS hardware_name,
+            hardware.meta_default_data  AS hardware_meta_default_data,
+            hardware_manufacturer.id    AS hardware_manufacturer_id,
+            hardware_manufacturer.name  AS hardware_manufacturer_name,
+            hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data,
+            hardware.size               AS hardware_size,
+            domain.name                 AS domain_name,
+            domain.meta_default_data    AS domain_meta_default_data,
+            role.name                   AS role_name, 
+            customer.name               AS customer_name
+        FROM
+            device, rack, row, room, building, hardware, org hardware_manufacturer, domain, role, org customer
+        WHERE
+            device.meta_default_data = 0 AND
+            device.rack = rack.id AND 
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id AND             
+            device.hardware = hardware.id AND
+            hardware.manufacturer = hardware_manufacturer.id AND
+            device.domain = domain.id AND
+            device.role = role.id AND
+            device.customer = customer.id AND
+            rack.id = ?
+        ORDER BY rack.row_pos
+    !
     );
 
     $sth->execute($rack);
@@ -746,39 +783,39 @@ sub deviceListUnracked    # consider merging this with existing device method (t
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			device.*,
-			rack.name 					AS rack_name,
-			building.meta_default_data	AS building_meta_default_data,
-			hardware.name 				AS hardware_name,
-			hardware.meta_default_data	AS hardware_meta_default_data,
-			hardware_manufacturer.id	AS hardware_manufacturer_id,
-			hardware_manufacturer.name	AS hardware_manufacturer_name,
-			hardware_manufacturer.meta_default_data	AS hardware_manufacturer_meta_default_data,
-			hardware.size				AS hardware_size,
-			domain.name					AS domain_name,
-			domain.meta_default_data	AS domain_meta_default_data,
-			role.name 					AS role_name,
-			os.name 					AS os_name,
-			customer.name 				AS customer_name
-			FROM
-			device, rack, row, room, building, hardware, org hardware_manufacturer, org customer, domain, role, os
-		WHERE
-			device.meta_default_data = 0 AND
-			building.meta_default_data <> 0 AND
-			device.rack = rack.id AND 
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id AND				
-			device.hardware = hardware.id AND
-			hardware.manufacturer = hardware_manufacturer.id AND
-			device.domain = domain.id AND
-			device.role = role.id AND
-			device.os = os.id AND
-			device.customer = customer.id
-			$filterBy
-		ORDER BY $orderBy
-	!
+        SELECT 
+            device.*,
+            rack.name                   AS rack_name,
+            building.meta_default_data  AS building_meta_default_data,
+            hardware.name               AS hardware_name,
+            hardware.meta_default_data  AS hardware_meta_default_data,
+            hardware_manufacturer.id    AS hardware_manufacturer_id,
+            hardware_manufacturer.name  AS hardware_manufacturer_name,
+            hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data,
+            hardware.size               AS hardware_size,
+            domain.name                 AS domain_name,
+            domain.meta_default_data    AS domain_meta_default_data,
+            role.name                   AS role_name,
+            os.name                     AS os_name,
+            customer.name               AS customer_name
+            FROM
+            device, rack, row, room, building, hardware, org hardware_manufacturer, org customer, domain, role, os
+        WHERE
+            device.meta_default_data = 0 AND
+            building.meta_default_data <> 0 AND
+            device.rack = rack.id AND 
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id AND             
+            device.hardware = hardware.id AND
+            hardware.manufacturer = hardware_manufacturer.id AND
+            device.domain = domain.id AND
+            device.role = role.id AND
+            device.os = os.id AND
+            device.customer = customer.id
+            $filterBy
+        ORDER BY $orderBy
+    !
     );
 
     $sth->execute;
@@ -790,15 +827,15 @@ sub deviceCountUnracked
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT count(*) 
-		FROM device, rack, row, room, building  
-		WHERE building.meta_default_data <> 0 AND
-		device.rack = rack.id AND 
-		rack.row = row.id AND
-		row.room = room.id AND
-		room.building = building.id AND
-		device.meta_default_data = 0
-	!
+        SELECT count(*) 
+        FROM device, rack, row, room, building  
+        WHERE building.meta_default_data <> 0 AND
+        device.rack = rack.id AND 
+        rack.row = row.id AND
+        row.room = room.id AND
+        room.building = building.id AND
+        device.meta_default_data = 0
+    !
     );
     $sth->execute;
     return ($sth->fetchrow_array)[0];
@@ -935,16 +972,16 @@ sub totalSizeDevice
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT COALESCE(SUM(hardware.size), 0) 
-		FROM hardware, device, rack, row, room, building
-		WHERE device.hardware = hardware.id AND
-		building.meta_default_data = 0 AND
-		device.rack = rack.id AND 
-		rack.row = row.id AND
-		row.room = room.id AND
-		room.building = building.id AND
-		device.meta_default_data = 0
-	!
+        SELECT COALESCE(SUM(hardware.size), 0) 
+        FROM hardware, device, rack, row, room, building
+        WHERE device.hardware = hardware.id AND
+        building.meta_default_data = 0 AND
+        device.rack = rack.id AND 
+        rack.row = row.id AND
+        row.room = room.id AND
+        room.building = building.id AND
+        device.meta_default_data = 0
+    !
     );
     $sth->execute;
     return ($sth->fetchrow_array)[0];
@@ -961,8 +998,8 @@ sub duplicateSerials
             device.serial_no,
             device.hardware,
             hardware.name AS hardware_name,
-			hardware_manufacturer.name AS hardware_manufacturer_name,
-			hardware_manufacturer.meta_default_data	AS hardware_manufacturer_meta_default_data
+            hardware_manufacturer.name AS hardware_manufacturer_name,
+            hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data
         FROM device, hardware, org hardware_manufacturer
         WHERE
             device.hardware = hardware.id AND
@@ -989,8 +1026,8 @@ sub duplicateAssets
             device.asset_no,
             device.hardware,
             hardware.name AS hardware_name,
-			hardware_manufacturer.name AS hardware_manufacturer_name,
-			hardware_manufacturer.meta_default_data	AS hardware_manufacturer_meta_default_data
+            hardware_manufacturer.name AS hardware_manufacturer_name,
+            hardware_manufacturer.meta_default_data AS hardware_manufacturer_meta_default_data
         FROM device, hardware, org hardware_manufacturer
         WHERE
             device.hardware = hardware.id AND
@@ -1090,10 +1127,10 @@ sub domain
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT domain.*
-		FROM domain
-		WHERE id = ?
-	!
+        SELECT domain.*
+        FROM domain
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $domain = $sth->fetchrow_hashref('NAME_lc');
@@ -1109,11 +1146,11 @@ sub domainList
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT domain.*
-		FROM domain 
-		WHERE domain.meta_default_data = 0
-		ORDER BY $orderBy
-	!
+        SELECT domain.*
+        FROM domain 
+        WHERE domain.meta_default_data = 0
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1173,15 +1210,15 @@ sub hardware
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-			hardware.*,
-			org.name 				AS manufacturer_name,
-			org.meta_default_data	As manufacturer_meta_default_data
-		FROM hardware, org
-		WHERE 
-			hardware.manufacturer = org.id AND
-			hardware.id = ?
-	!
+        SELECT
+            hardware.*,
+            org.name                AS manufacturer_name,
+            org.meta_default_data   As manufacturer_meta_default_data
+        FROM hardware, org
+        WHERE 
+            hardware.manufacturer = org.id AND
+            hardware.id = ?
+    !
     );
 
     $sth->execute($id);
@@ -1204,15 +1241,15 @@ sub hardwareList
 
         $sth = $self->dbh->prepare(
             qq!
-    		SELECT
-    			hardware.*,
-    			org.name 				AS manufacturer_name
-    		FROM hardware, org
-    		WHERE
-    			hardware.meta_default_data = 0 AND
-    			hardware.manufacturer = org.id
-    		ORDER BY $orderBy
-    	!
+            SELECT
+                hardware.*,
+                org.name                AS manufacturer_name
+            FROM hardware, org
+            WHERE
+                hardware.meta_default_data = 0 AND
+                hardware.manufacturer = org.id
+            ORDER BY $orderBy
+        !
         );
     }
     else
@@ -1221,13 +1258,13 @@ sub hardwareList
         $orderBy = 'hardware.meta_default_data DESC, ' . $orderBy;
         $sth     = $self->dbh->prepare(
             qq!
-    		SELECT
-    			hardware.*
-    	    FROM hardware
-    		WHERE
-    			hardware.manufacturer = $manufacturer
-    		ORDER BY $orderBy
-    	!
+            SELECT
+                hardware.*
+            FROM hardware
+            WHERE
+                hardware.manufacturer = $manufacturer
+            ORDER BY $orderBy
+        !
         );
     }
 
@@ -1255,19 +1292,19 @@ sub hardwareListBasic
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			hardware.id,
-			hardware.name,
-			hardware.meta_default_data,
-			org.name 				AS manufacturer_name,
-			org.meta_default_data	As manufacturer_meta_default_data
-		FROM hardware, org
-		WHERE hardware.manufacturer = org.id
-		ORDER BY 
-			hardware.meta_default_data DESC,
-			manufacturer_name,
-			hardware.name
-	!
+        SELECT
+            hardware.id,
+            hardware.name,
+            hardware.meta_default_data,
+            org.name                AS manufacturer_name,
+            org.meta_default_data   As manufacturer_meta_default_data
+        FROM hardware, org
+        WHERE hardware.manufacturer = org.id
+        ORDER BY 
+            hardware.meta_default_data DESC,
+            manufacturer_name,
+            hardware.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1338,22 +1375,22 @@ sub hardwareDeviceCount
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			hardware.id AS id, 
-			hardware.name AS hardware, 
-			org.name AS manufacturer,
-			COUNT(device.id) AS num_devices,
-			hardware.meta_default_data AS hardware_meta_default_data,
-			org.meta_default_data AS hardware_manufacturer_meta_default_data,
-			SUM(hardware.size) AS space_used			
-		FROM device, hardware, org 
-		WHERE 
-			device.hardware = hardware.id AND
-			hardware.manufacturer = org.id 
-		GROUP BY hardware.id, hardware.name, org.name, hardware.meta_default_data, org.meta_default_data
-		ORDER BY num_devices DESC
-		LIMIT 10;
-	!
+        SELECT
+            hardware.id AS id, 
+            hardware.name AS hardware, 
+            org.name AS manufacturer,
+            COUNT(device.id) AS num_devices,
+            hardware.meta_default_data AS hardware_meta_default_data,
+            org.meta_default_data AS hardware_manufacturer_meta_default_data,
+            SUM(hardware.size) AS space_used            
+        FROM device, hardware, org 
+        WHERE 
+            device.hardware = hardware.id AND
+            hardware.manufacturer = org.id 
+        GROUP BY hardware.id, hardware.name, org.name, hardware.meta_default_data, org.meta_default_data
+        ORDER BY num_devices DESC
+        LIMIT 10;
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1364,16 +1401,16 @@ sub hardwareWithDevice
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			DISTINCT hardware.id, hardware.name, hardware.meta_default_data
-		FROM 
-			device, hardware
-		WHERE 
-			device.hardware = hardware.id
-		ORDER BY
-		 	hardware.meta_default_data DESC,
-			hardware.name
-	!
+        SELECT
+            DISTINCT hardware.id, hardware.name, hardware.meta_default_data
+        FROM 
+            device, hardware
+        WHERE 
+            device.hardware = hardware.id
+        ORDER BY
+            hardware.meta_default_data DESC,
+            hardware.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1389,10 +1426,10 @@ sub org
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT org.*
-		FROM org 
-		WHERE id = ?
-	!
+        SELECT org.*
+        FROM org 
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $org = $sth->fetchrow_hashref('NAME_lc');
@@ -1408,11 +1445,11 @@ sub orgList
     $orderBy .= ' DESC' if ($orderBy eq 'org.customer' or $orderBy eq 'org.hardware' or $orderBy eq 'org.software');    # yeses appear first
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT org.*
-		FROM org
-		WHERE org.meta_default_data = 0
-		ORDER BY $orderBy
-	!
+        SELECT org.*
+        FROM org
+        WHERE org.meta_default_data = 0
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1423,17 +1460,17 @@ sub manufacturerWithHardwareList
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT DISTINCT 
-		    hardware.manufacturer AS id,
-		    hardware_manufacturer.name AS name,
-		    hardware_manufacturer.meta_default_data 
-		FROM hardware, hardware_manufacturer
-		WHERE 
-		    hardware.manufacturer = hardware_manufacturer.id
-		ORDER BY 
-		    hardware_manufacturer.meta_default_data DESC,
-		    hardware_manufacturer.name
-	!
+        SELECT DISTINCT 
+            hardware.manufacturer AS id,
+            hardware_manufacturer.name AS name,
+            hardware_manufacturer.meta_default_data 
+        FROM hardware, hardware_manufacturer
+        WHERE 
+            hardware.manufacturer = hardware_manufacturer.id
+        ORDER BY 
+            hardware_manufacturer.meta_default_data DESC,
+            hardware_manufacturer.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1501,19 +1538,19 @@ sub customerDeviceCount
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			org.id AS id, 
-			org.name AS customer,
-			COUNT(device.id) AS num_devices,
-			SUM(hardware.size) AS space_used
-		FROM device, org, hardware 
-		WHERE 
-			device.customer = org.id AND
-			device.hardware = hardware.id
-		GROUP BY org.id, org.name 
-		ORDER BY num_devices DESC
-		LIMIT 10;
-	!
+        SELECT
+            org.id AS id, 
+            org.name AS customer,
+            COUNT(device.id) AS num_devices,
+            SUM(hardware.size) AS space_used
+        FROM device, org, hardware 
+        WHERE 
+            device.customer = org.id AND
+            device.hardware = hardware.id
+        GROUP BY org.id, org.name 
+        ORDER BY num_devices DESC
+        LIMIT 10;
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1524,16 +1561,16 @@ sub customerWithDevice
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			DISTINCT org.id, org.name, org.meta_default_data
-		FROM 
-			org, device
-		WHERE 
-			device.customer = org.id
-		ORDER BY 
-			org.meta_default_data DESC,
-			org.name
-	!
+        SELECT
+            DISTINCT org.id, org.name, org.meta_default_data
+        FROM 
+            org, device
+        WHERE 
+            device.customer = org.id
+        ORDER BY 
+            org.meta_default_data DESC,
+            org.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1549,15 +1586,15 @@ sub os
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			os.*,
-			org.name 				AS manufacturer_name,
-			org.meta_default_data	As manufacturer_meta_default_data
-		FROM os, org 
-		WHERE 
-			os.manufacturer = org.id AND
-			os.id = ?
-	!
+        SELECT 
+            os.*,
+            org.name                AS manufacturer_name,
+            org.meta_default_data   As manufacturer_meta_default_data
+        FROM os, org 
+        WHERE 
+            os.manufacturer = org.id AND
+            os.id = ?
+    !
     );
 
     $sth->execute($id);
@@ -1575,15 +1612,15 @@ sub osList
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			os.*,
-			org.name 				AS manufacturer_name
-		FROM os, org 
-		WHERE 
-			os.meta_default_data = 0 AND
-			os.manufacturer = org.id
-		ORDER BY $orderBy
-	!
+        SELECT 
+            os.*,
+            org.name                AS manufacturer_name
+        FROM os, org 
+        WHERE 
+            os.meta_default_data = 0 AND
+            os.manufacturer = org.id
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1638,22 +1675,22 @@ sub osDeviceCount
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT 
-			os.id AS id,
-			os.name AS os, 
-			device.os_version AS version,
-			COUNT(device.id) AS num_devices,
-			os.meta_default_data AS os_meta_default_data,
-			SUM(hardware.size) AS space_used
-		FROM device, os, org, hardware
-		WHERE 
-			device.os = os.id AND
-			os.manufacturer = org.id AND
-			device.hardware = hardware.id
-		GROUP BY os.id, os.name, device.os_version, os.meta_default_data
-		ORDER BY num_devices DESC
-		LIMIT 10;
-	!
+        SELECT 
+            os.id AS id,
+            os.name AS os, 
+            device.os_version AS version,
+            COUNT(device.id) AS num_devices,
+            os.meta_default_data AS os_meta_default_data,
+            SUM(hardware.size) AS space_used
+        FROM device, os, org, hardware
+        WHERE 
+            device.os = os.id AND
+            os.manufacturer = org.id AND
+            device.hardware = hardware.id
+        GROUP BY os.id, os.name, device.os_version, os.meta_default_data
+        ORDER BY num_devices DESC
+        LIMIT 10;
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1664,16 +1701,16 @@ sub osWithDevice
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			DISTINCT os.id, os.name, os.meta_default_data
-		FROM 
-			os, device
-		WHERE 
-			device.os = os.id
-		ORDER BY 
-			os.meta_default_data DESC,
-			os.name
-	!
+        SELECT
+            DISTINCT os.id, os.name, os.meta_default_data
+        FROM 
+            os, device
+        WHERE 
+            device.os = os.id
+        ORDER BY 
+            os.meta_default_data DESC,
+            os.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1689,28 +1726,28 @@ sub rack
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			rack.*,
-			row.name			AS row_name,
-			row.hidden_row		AS row_hidden,
-			room.id				AS room,
-			room.name			AS room_name,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short,
-			count(device.id)	AS device_count,
-			rack.size - COALESCE(SUM(hardware.size), 0)	AS free_space
-		FROM row, room, building, rack
-		LEFT OUTER JOIN device ON
-			(rack.id = device.rack)
-		LEFT OUTER JOIN hardware ON
-			(device.hardware = hardware.id)
-		WHERE
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id AND
-			rack.id = ?
-		GROUP BY rack.id, rack.name, rack.row, rack.row_pos, rack.hidden_rack, rack.numbering_direction, rack.size, rack.notes, rack.meta_default_data, rack.meta_update_time, rack.meta_update_user, row.name, row.hidden_row, room.id, room.name, building.name, building.name_short
-	!
+        SELECT 
+            rack.*,
+            row.name            AS row_name,
+            row.hidden_row      AS row_hidden,
+            room.id             AS room,
+            room.name           AS room_name,
+            building.name       AS building_name,
+            building.name_short AS building_name_short,
+            count(device.id)    AS device_count,
+            rack.size - COALESCE(SUM(hardware.size), 0) AS free_space
+        FROM row, room, building, rack
+        LEFT OUTER JOIN device ON
+            (rack.id = device.rack)
+        LEFT OUTER JOIN hardware ON
+            (device.hardware = hardware.id)
+        WHERE
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id AND
+            rack.id = ?
+        GROUP BY rack.id, rack.name, rack.row, rack.row_pos, rack.hidden_rack, rack.numbering_direction, rack.size, rack.notes, rack.meta_default_data, rack.meta_update_time, rack.meta_update_user, row.name, row.hidden_row, room.id, room.name, building.name, building.name_short
+    !
     );
     $sth->execute($id);
     my $rack = $sth->fetchrow_hashref('NAME_lc');
@@ -1728,29 +1765,29 @@ sub rackList
       unless ($orderBy eq 'rack.row_pos, rack.name' or $orderBy eq 'rack.name');    # default third ordering is rack name
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			rack.*,
-			row.name			AS row_name,
-			row.hidden_row		AS row_hidden,
-			room.id				AS room,
-			room.name			AS room_name,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short,
-			count(device.id)	AS device_count,
-			rack.size - COALESCE(SUM(hardware.size), 0)	AS free_space
-		FROM row, room, building, rack
-		LEFT OUTER JOIN device ON
-			(rack.id = device.rack)
-		LEFT OUTER JOIN hardware ON
-			(device.hardware = hardware.id)
-		WHERE
-			rack.meta_default_data = 0 AND
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id
-		GROUP BY rack.id, rack.name, rack.row, rack.row_pos, rack.hidden_rack, rack.size, rack.numbering_direction, rack.notes, rack.meta_default_data, rack.meta_update_time, rack.meta_update_user, row.name, row.hidden_row, room.id, room.name, building.name, building.name_short
-		ORDER BY $orderBy
-	!
+        SELECT 
+            rack.*,
+            row.name            AS row_name,
+            row.hidden_row      AS row_hidden,
+            room.id             AS room,
+            room.name           AS room_name,
+            building.name       AS building_name,
+            building.name_short AS building_name_short,
+            count(device.id)    AS device_count,
+            rack.size - COALESCE(SUM(hardware.size), 0) AS free_space
+        FROM row, room, building, rack
+        LEFT OUTER JOIN device ON
+            (rack.id = device.rack)
+        LEFT OUTER JOIN hardware ON
+            (device.hardware = hardware.id)
+        WHERE
+            rack.meta_default_data = 0 AND
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id
+        GROUP BY rack.id, rack.name, rack.row, rack.row_pos, rack.hidden_rack, rack.size, rack.numbering_direction, rack.notes, rack.meta_default_data, rack.meta_update_time, rack.meta_update_user, row.name, row.hidden_row, room.id, room.name, building.name, building.name_short
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1762,23 +1799,23 @@ sub rackListInRoom
     $room += 0;    # force room to be numeric
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			rack.*,
-			row.name			AS row_name,
-			row.hidden_row		AS row_hidden,
-			room.id				AS room,
-			room.name			AS room_name,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM rack, row, room, building 
-		WHERE
-			rack.meta_default_data = 0 AND
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id AND
-			row.room = ?
-		ORDER BY rack.row, rack.row_pos
-	!
+        SELECT 
+            rack.*,
+            row.name            AS row_name,
+            row.hidden_row      AS row_hidden,
+            room.id             AS room,
+            room.name           AS room_name,
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM rack, row, room, building 
+        WHERE
+            rack.meta_default_data = 0 AND
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id AND
+            row.room = ?
+        ORDER BY rack.row, rack.row_pos
+    !
     );
     $sth->execute($room);
     return $sth->fetchall_arrayref({});
@@ -1793,26 +1830,26 @@ sub rackListBasic
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-			rack.id,
-			rack.name,
-			rack.meta_default_data,
-			room.name		AS room_name, 
-			building.name	AS building_name,
-			building.name_short	AS building_name_short
-		FROM rack, row, room, building 
-		WHERE
-			rack.row = row.id AND
-			row.room = room.id AND
-			room.building = building.id
-			$meta
-		ORDER BY 
-			rack.meta_default_data DESC,
-			building.name,
-			room.name,
-			row.room_pos,
-			rack.row_pos
-	!
+        SELECT
+            rack.id,
+            rack.name,
+            rack.meta_default_data,
+            room.name       AS room_name, 
+            building.name   AS building_name,
+            building.name_short AS building_name_short
+        FROM rack, row, room, building 
+        WHERE
+            rack.row = row.id AND
+            row.room = room.id AND
+            room.building = building.id
+            $meta
+        ORDER BY 
+            rack.meta_default_data DESC,
+            building.name,
+            room.name,
+            row.room_pos,
+            rack.row_pos
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -1827,11 +1864,11 @@ sub rackPhysical
 
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			rack.*
-		FROM rack
-		WHERE rack.id = ?
-	!
+        SELECT 
+            rack.*
+        FROM rack
+        WHERE rack.id = ?
+    !
     );
     $sth->execute($rackid);
     my $rack = $sth->fetchrow_hashref('NAME_lc');
@@ -1981,14 +2018,14 @@ sub _highestUsedInRack
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			MAX(device.rack_pos + hardware.size - 1)
-		FROM device, rack, hardware
-		WHERE 
-			device.rack = rack.id AND
-			device.hardware = hardware.id AND
-			rack.id = ?
-	!
+        SELECT 
+            MAX(device.rack_pos + hardware.size - 1)
+        FROM device, rack, hardware
+        WHERE 
+            device.rack = rack.id AND
+            device.hardware = hardware.id AND
+            rack.id = ?
+    !
     );
     $sth->execute($id);
     return ($sth->fetchrow_array)[0];
@@ -1999,9 +2036,9 @@ sub totalSizeRack
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT COALESCE(SUM(size), 0) 
-		FROM rack; 
-	!
+        SELECT COALESCE(SUM(size), 0) 
+        FROM rack; 
+    !
     );
     $sth->execute;
     return ($sth->fetchrow_array)[0];
@@ -2017,10 +2054,10 @@ sub role
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT role.*
-		FROM role 
-		WHERE id = ?
-	!
+        SELECT role.*
+        FROM role 
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $role = $sth->fetchrow_hashref('NAME_lc');
@@ -2035,11 +2072,11 @@ sub roleList
     $orderBy = 'role.name' unless $self->_checkOrderBy($orderBy);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT role.* 
-		FROM role 
-		WHERE role.meta_default_data = 0
-		ORDER BY $orderBy
-	!
+        SELECT role.* 
+        FROM role 
+        WHERE role.meta_default_data = 0
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -2094,19 +2131,19 @@ sub roleDeviceCount
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			role.id AS id, 
-		 	role.name AS role, 
-			COUNT(device.id) AS num_devices,
-			SUM(hardware.size) AS space_used 
-		FROM device, role, hardware 
-		WHERE 
-			device.role = role.id AND
-			device.hardware = hardware.id
-		GROUP BY role.id, role.name 
-		ORDER BY num_devices DESC
-		LIMIT 10;
-	!
+        SELECT
+            role.id AS id, 
+            role.name AS role, 
+            COUNT(device.id) AS num_devices,
+            SUM(hardware.size) AS space_used 
+        FROM device, role, hardware 
+        WHERE 
+            device.role = role.id AND
+            device.hardware = hardware.id
+        GROUP BY role.id, role.name 
+        ORDER BY num_devices DESC
+        LIMIT 10;
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -2117,16 +2154,16 @@ sub roleWithDevice
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         qq!
-		SELECT
-			DISTINCT role.id, role.name, role.meta_default_data
-		FROM 
-			role, device
-		WHERE 
-			device.role = role.id
-		ORDER BY 
-			role.meta_default_data DESC,
-			role.name
-	!
+        SELECT
+            DISTINCT role.id, role.name, role.meta_default_data
+        FROM 
+            role, device
+        WHERE 
+            device.role = role.id
+        ORDER BY 
+            role.meta_default_data DESC,
+            role.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -2143,15 +2180,15 @@ sub room
     croak "RM_ENGINE: Unable to retrieve room. No room id specified." unless ($id);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			room.*, 
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM room, building 
-		WHERE
-			room.building = building.id AND
-			room.id = ?
-	!
+        SELECT 
+            room.*, 
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM room, building 
+        WHERE
+            room.building = building.id AND
+            room.id = ?
+    !
     );
     $sth->execute($id);
     my $room = $sth->fetchrow_hashref('NAME_lc');
@@ -2167,16 +2204,16 @@ sub roomList
     $orderBy = $orderBy . ', room.name' unless $orderBy eq 'room.name';    # default second ordering is room name
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-			room.*,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM room, building
-		WHERE
-			room.meta_default_data = 0 AND
-			room.building = building.id
-		ORDER BY $orderBy
-	!
+        SELECT
+            room.*,
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM room, building
+        WHERE
+            room.meta_default_data = 0 AND
+            room.building = building.id
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -2191,17 +2228,17 @@ sub roomListInBuilding
     $orderBy = 'building.name' unless $self->_checkOrderBy($orderBy);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-			room.*,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM room, building
-		WHERE
-			room.meta_default_data = 0 AND
-			room.building = building.id AND
-			room.building = ?
-		ORDER BY $orderBy
-	!
+        SELECT
+            room.*,
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM room, building
+        WHERE
+            room.meta_default_data = 0 AND
+            room.building = building.id AND
+            room.building = ?
+        ORDER BY $orderBy
+    !
     );
     $sth->execute($building);
     return $sth->fetchall_arrayref({});
@@ -2212,20 +2249,20 @@ sub roomListBasic
     my $self = shift;
     my $sth  = $self->dbh->prepare(
         q!
-		SELECT 
-			room.id, 
-			room.name, 
-			building.name AS building_name,
-			building.name_short	AS building_name_short
-		FROM room, building 
-		WHERE 
-			room.meta_default_data = 0 AND
-			room.building = building.id 
-		ORDER BY 
-			room.meta_default_data DESC,
-			building.name,
-			room.name
-	!
+        SELECT 
+            room.id, 
+            room.name, 
+            building.name AS building_name,
+            building.name_short AS building_name_short
+        FROM room, building 
+        WHERE 
+            room.meta_default_data = 0 AND
+            room.building = building.id 
+        ORDER BY 
+            room.meta_default_data DESC,
+            building.name,
+            room.name
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -2289,17 +2326,17 @@ sub row
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			row.*,
-			room.name			AS room_name,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM row, room, building 
-		WHERE
-			row.room = room.id AND
-			room.building = building.id AND
-			row.id = ?
-	!
+        SELECT 
+            row.*,
+            room.name           AS room_name,
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM row, room, building 
+        WHERE
+            row.room = room.id AND
+            room.building = building.id AND
+            row.id = ?
+    !
     );
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref('NAME_lc');
@@ -2315,18 +2352,18 @@ sub rowList
     $orderBy = $orderBy . ', row.name' unless $orderBy eq 'row.name';                 # default third ordering is row name
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			row.*,
-			room.name			AS room_name,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM row, room, building 
-		WHERE
-			row.meta_default_data = 0 AND
-			row.room = room.id AND
-			room.building = building.id
-		ORDER BY $orderBy
-	!
+        SELECT 
+            row.*,
+            room.name           AS room_name,
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM row, room, building 
+        WHERE
+            row.meta_default_data = 0 AND
+            row.room = room.id AND
+            room.building = building.id
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});
@@ -2338,19 +2375,19 @@ sub rowListInRoom
     $room += 0;    # force room to be numeric
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT 
-			row.*,
-			room.name			AS room_name,
-			building.name		AS building_name,
-			building.name_short	AS building_name_short
-		FROM row, room, building 
-		WHERE
-			row.meta_default_data = 0 AND
-			row.room = room.id AND
-			room.building = building.id AND
-			row.room = ?
-		ORDER BY row.room_pos
-	!
+        SELECT 
+            row.*,
+            room.name           AS room_name,
+            building.name       AS building_name,
+            building.name_short AS building_name_short
+        FROM row, room, building 
+        WHERE
+            row.meta_default_data = 0 AND
+            row.room = room.id AND
+            room.building = building.id AND
+            row.room = ?
+        ORDER BY row.room_pos
+    !
     );
     $sth->execute($room);
     return $sth->fetchall_arrayref({});
@@ -2362,15 +2399,15 @@ sub rowListInRoomBasic
     $room += 0;    # force room to be numeric
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-			row.id,
-			row.name
-		FROM row
-		WHERE
-			row.meta_default_data = 0 AND
-			row.room = ?
-		ORDER BY row.name
-	!
+        SELECT
+            row.id,
+            row.name
+        FROM row
+        WHERE
+            row.meta_default_data = 0 AND
+            row.room = ?
+        ORDER BY row.name
+    !
     );
     $sth->execute($room);
     return $sth->fetchall_arrayref({});
@@ -2382,13 +2419,13 @@ sub rowCountInRoom
     $room += 0;    # force room to be numeric
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT
-			count(*)
-		FROM row
-		WHERE
-			row.meta_default_data = 0 AND
-			row.room = ?
-	!
+        SELECT
+            count(*)
+        FROM row
+        WHERE
+            row.meta_default_data = 0 AND
+            row.room = ?
+    !
     );
     $sth->execute($room);
     my $countRef = $sth->fetch;
@@ -2445,10 +2482,10 @@ sub service
     my ($self, $id) = @_;
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT service.* 
-		FROM service 
-		WHERE id = ?
-	!
+        SELECT service.* 
+        FROM service 
+        WHERE id = ?
+    !
     );
     $sth->execute($id);
     my $service = $sth->fetchrow_hashref('NAME_lc');
@@ -2463,11 +2500,11 @@ sub serviceList
     $orderBy = 'service.name' unless $self->_checkOrderBy($orderBy);
     my $sth = $self->dbh->prepare(
         qq!
-		SELECT service.* 
-		FROM service 
-		WHERE service.meta_default_data = 0
-		ORDER BY $orderBy
-	!
+        SELECT service.* 
+        FROM service 
+        WHERE service.meta_default_data = 0
+        ORDER BY $orderBy
+    !
     );
     $sth->execute;
     return $sth->fetchall_arrayref({});

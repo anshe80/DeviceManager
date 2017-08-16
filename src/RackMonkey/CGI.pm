@@ -13,6 +13,7 @@ use warnings;
 
 use 5.006_001;
 
+use CGI::Session;
 use CGI;
 
 our $VERSION = '1.2.5-1';
@@ -281,6 +282,29 @@ sub selectHardware
         $$i{'name'} = $$i{'manufacturer_name'} . ' ' . $$i{'name'} unless $$i{'meta_default_data'} or $$i{'manufacturer_meta_default_data'};
     }
     return $items;
+}
+
+##############################################################################
+# Session Methods                                                        #
+##############################################################################
+
+sub getSession
+{
+    my ($self, $sessionId) = @_;
+    my $session = CGI::Session->load("driver:db_file", $sessionId);
+    return $session;
+}
+
+sub createSession
+{
+    my ($self, $userName, $userType, $userMail) = @_;
+
+    my $session = CGI::Session->new("driver:db_file", undef);
+
+    $session->param('user_name', $userName);
+    $session->param('user_type', $userType);
+    $session->param('user_mail', $userMail);
+    return $session;
 }
 
 1;
