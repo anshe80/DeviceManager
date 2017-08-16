@@ -160,8 +160,11 @@ sub vars
 sub header
 {
     my $self = shift;
-    my $type = shift || 'text/html';
-    return $self->cgi->header($type);
+    # my $type = shift || 'text/html';
+    return $self->cgi->header(-type => 'text/html',
+           -expires => '+3d',
+           # -cookie  => $cookie,
+           -charset => 'utf-8');
 }
 
 sub lastCreatedId
