@@ -167,6 +167,18 @@ sub header
            -charset => 'utf-8');
 }
 
+sub getCurrentPageNum
+{
+    my ($self, $defValue) = @_;
+    return $self->cgi->param('current_page_num') || $defValue;
+}
+
+sub getPageSize
+{
+    my ($self, $defValue) = @_;
+    return $self->cgi->param('page_size') || $defValue;
+}
+
 sub lastCreatedId
 {
     my $self = shift;

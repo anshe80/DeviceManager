@@ -649,6 +649,7 @@ sub deviceList
     my $filters      = shift || {};
     my $filterBy     = '';
     my $deviceSearch = shift || '';
+    my $limit        = shift || '';
     $deviceSearch = lc($deviceSearch);    # searching is case insensitive
 
     for my $f (keys %$filters)
@@ -711,6 +712,7 @@ sub deviceList
             $filterBy
             $deviceSearch
         ORDER BY $orderBy
+        $limit
     !
     );
     $sth->execute;
@@ -766,6 +768,7 @@ sub deviceListUnracked    # consider merging this with existing device method (t
     my $self     = shift;
     my $orderBy  = shift || '';
     my $filters  = shift || {};
+    my $limit    = shift || '';
     my $filterBy = '';
 
     for my $f (keys %$filters)
@@ -815,6 +818,7 @@ sub deviceListUnracked    # consider merging this with existing device method (t
             device.customer = customer.id
             $filterBy
         ORDER BY $orderBy
+        $limit
     !
     );
 
@@ -1759,6 +1763,7 @@ sub rackList
 {
     my $self = shift;
     my $orderBy = shift || '';
+    my $limit = shift || '';
     $orderBy = 'building.name, room.name, row.name, rack.row_pos'
       unless $orderBy =~ /^[a-z_]+[\._][a-z_]+$/;    # by default, order by building name and room name first
     $orderBy = $orderBy . ', rack.row_pos, rack.name'
@@ -1787,6 +1792,7 @@ sub rackList
             room.building = building.id
         GROUP BY rack.id, rack.name, rack.row, rack.row_pos, rack.hidden_rack, rack.size, rack.numbering_direction, rack.notes, rack.meta_default_data, rack.meta_update_time, rack.meta_update_user, row.name, row.hidden_row, room.id, room.name, building.name, building.name_short
         ORDER BY $orderBy
+        $limit
     !
     );
     $sth->execute;

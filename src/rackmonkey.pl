@@ -177,13 +177,14 @@ eval {
             {
                 my $devices;
 
+                my $limit = &getSQLLimt($cgi, $template);
                 if ($viewType =~ /^default_unracked/)
                 {
-                    $devices = $backend->deviceListUnracked($orderBy, $filterBy, $deviceSearch);
+                    $devices = $backend->deviceListUnracked($orderBy, $filterBy, $deviceSearch, $limit);
                 }
                 else
                 {
-                    $devices = $backend->deviceList($orderBy, $filterBy, $deviceSearch);
+                    $devices = $backend->deviceList($orderBy, $filterBy, $deviceSearch, $limit);
                 }
 
                 my $filterBy = $cgi->filterBy;
@@ -454,7 +455,8 @@ eval {
         {
             if ($viewType =~ /^default/)
             {
-                my $racks = $backend->rackList($orderBy);
+                my $limit = &getSQLLimt($cgi, $template);
+                my $racks = $backend->rackList($orderBy, $limit);
                 for my $r (@$racks)
                 {
                     $$r{'notes'} = formatNotes($$r{'notes'}, 1);
@@ -469,7 +471,8 @@ eval {
             }
             elsif ($viewType =~ /^physical/)
             {
-                my @rackIdList = $cgi->rackList;
+                my $limit = &getSQLLimt($cgi, $template, 4);
+                my @rackIdList = $cgi->rackList('', $limit);
                 push(@rackIdList, $id) if (scalar(@rackIdList) == 0);    # add current rack id if no list
                 die "RMERR: You need to select at least one rack to display. Use the checkboxes at the right of the rack table to select racks."
                   unless $rackIdList[0];
@@ -812,4 +815,15 @@ sub formatNotes
     }
 
     return $note;
+}
+
+sub getSQLLimt
+{
+    my ($cgi, $template, $defValue) = @_;
+    $defValue = 20 unless($defValue);
+    my $curPage  = $cgi->getCurrentPageNum(1);
+    my $pageSize = $cgi->getPageSize($defValue);
+    my $startPos = ($curPage - 1) * $pageSize;
+    $template->param('current_page_num' => $curPage);
+    return " LIMIT $startPos,$pageSize"; 
 }
