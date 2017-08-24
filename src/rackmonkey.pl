@@ -484,6 +484,8 @@ eval {
                     $$rack{'rack_layout'} = $backend->rackPhysical($rackId, $selectDevice, 1);
                     push @racks, $rack;
                 }
+                my $totalRackCount  = $backend->itemCount('rack');
+                $template->param('total_rack_count'  => $totalRackCount);
                 $template->param('rack_list' => \@racks);
                 $template->param('device_id' => $selectDevice);
             }
